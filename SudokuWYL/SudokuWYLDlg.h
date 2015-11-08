@@ -5,6 +5,7 @@
 #pragma once
 #include "afxwin.h"
 #include "sudoku.h"
+#include "afxcmn.h"
 
 
 // CSudokuWYLDlg 对话框
@@ -46,8 +47,8 @@ private:
 	sudoku m_Sudoku; 
 	int mouseX;        //数独内双击鼠标的格子编号
 	int mouseY;
-	bool hasFiguredOut;    //记录是否已经被求解
-	int keyBoardInput[SUDOKU_SIZE_9][SUDOKU_SIZE_9];  //记录哪些位置是键盘输入的值，以便进行颜色标记。
+	bool canSelected;    //表示当前数独状态能否选择格子
+	bool keyBoardInput[SUDOKU_SIZE_9][SUDOKU_SIZE_9];  //记录哪些位置是键盘输入的值，以便进行颜色标记。
 
 public:
 	afx_msg void OnBnClickedButton2();
@@ -55,4 +56,6 @@ public:
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	afx_msg void OnBnClickedButton3();
+	// 进度条
+	CProgressCtrl m_progressPanel;
 };
