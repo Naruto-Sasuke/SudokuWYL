@@ -12,7 +12,7 @@
 
 #define CELLCOLOR			RGB(205, 250, 240)  //格子背景颜色
 #define STROKECOLOR			RGB(220,220,220)    //格子边框颜色
-#define SELECTEDNUMCOLOR	RGB(248, 147, 29)	//选中数字的颜色
+#define SELECTEDNUMCOLOR	RGB(255, 51, 0)		//选中数字的颜色
 #define MYNUMCOLOR			RGB(118, 77, 57)	//普通数字的颜色
 #define GONGCOLOR			RGB(100, 210, 130)  //宫的颜色
 #define SPSTROKECOLOR		RGB(200, 220, 120)	//选中的边框的颜色
@@ -229,7 +229,7 @@ void CSudokuWYLDlg::OnBnClickedButton2()
 		tStart = clock();
 		m_Sudoku9.halfRandomGen(3, tmpCheckBorad);
 		tEnd = clock();
-		timeStr.Format(_T("交叉变换生成初盘，用时:%.7f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+		timeStr.Format(_T("交叉变换生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
 		m_Sudoku9.setDirectCheckBoard(tmpCheckBorad);
 	}
@@ -453,7 +453,11 @@ void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j, CString numStr, COLORREF 
 	}
 	else //16x16的棋盘的数字位置
 	{
-		pDC->TextOut(LEFT + SIZE*j + SIZE / 4, TOP + SIZE*i + SIZE / 5, numStr);
+		int num = _ttoi(numStr);      //CString转int
+		if (num >= 10) //2位数
+			pDC->TextOut(LEFT + SIZE*j + SIZE / 4, TOP + SIZE*i + SIZE / 5, numStr);
+		else
+			pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);		
 	}
 	
 }
@@ -480,8 +484,6 @@ void CSudokuWYLDlg::SpDrawStorke(CDC *pDC, CRect rect, COLORREF color, int strok
 
 void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 {
-	// TODO:  在此添加消息处理程序代码和/或调用默认值
-
 	CDC *pDC = GetDC();
 	GetCursorPos(&point);
 	ScreenToClient(&point);
@@ -546,8 +548,6 @@ void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 #pragma endregion
 
 
-
-
 	CDialogEx::OnLButtonDblClk(nFlags, point);
 }
 
@@ -557,7 +557,6 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 {
 //为了防止通过键盘使得combox获得焦点，从而造成9x9和16x16的界面转换
 //推荐每次进行界面转换后，重置一下棋盘，使得combox失去焦点
-
 	CDC *pDC = GetDC();
 	//9x9
 	if (sudokuSize == 9)
@@ -612,9 +611,13 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 			if (pMsg->message == WM_KEYDOWN)
 			{
 				int keyValue = pMsg->wParam;
-				if (keyValue >= 49 && keyValue <= 57) //
+				if ((keyValue >= 65 && keyValue <= 71) ||( keyValue>=49 && keyValue <=57)) //从A到F，为10到16
 				{
-					int inValue = keyValue - 48;
+					int inValue = 0;
+					if (keyValue >= 48 && keyValue <= 57)
+						inValue = keyValue - 48;
+					else
+						inValue = keyValue - 55;
 					CString numStr;
 					numStr.Format(_T("%d"), inValue);
 
@@ -652,7 +655,6 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
-
 
 //棋盘重置
 void CSudokuWYLDlg::OnBnClickedButton3()
@@ -693,5 +695,13 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 //////////////////////////////////////////////////////////////////////////
 //用GetDC()，是相对于document区域的左上角。
 //如果用GetWindowDC()，导致都是窗口的左上角为绘画原点的。
-
-
+/************************************************************************/
+/* 在有DLX后，时间相减得到一个数组，通过判断bool数组的true多还是false多，从而
+判断回溯法和DLX方法的好坏。*/
+/************************************************************************/
+/************************************************************************/
+/*								使用说明                                 */
+/*1.在通过复选框更换棋盘大小时，最好要按一下“棋盘重置”，使得复选框失去焦点，否则
+输入数字“1,9”时会使得棋盘界面更改。
+  2.只能通过棋盘上方的数字键“1~9”和“a~g（仅在16x16棋盘有效，分别代表10~16）”*/
+/************************************************************************/
