@@ -19,18 +19,12 @@
 
 int sudoku::getValueFromCheckBoard(int i,int j)
 {
-	if(i >= SUDOKU_SIZE_9 || j >= SUDOKU_SIZE_9)  //针对9*9
-	{
-		return -1;
-	}
-	else
-		return checkBoard[i][j] ;
+	return checkBoard[i][j] ;
 }
 
 
 // sudoku 消息处理程序
 sudoku::sudoku(int _size_){
-	_size_ = 9;
 	canBeSolved = false;
 	__size__ = _size_;
 	__sqt__ = int(sqrt((double)__size__));                     
@@ -51,16 +45,16 @@ sudoku::sudoku(int _size_){
 }
 
  sudoku::~sudoku(){
-	 //if(this->checkBoard != NULL)
-	 //{
-		// for(int i = 0; i < __size__; ++i)
-		//	 if (NULL!=checkBoard[i])
-		//	 {
-		//		  free(checkBoard[i]);
-		//	 }
-		//	
-		// free(checkBoard);
-	 //}
+	 if (this->checkBoard != NULL)
+	 {
+		 for (int i = 0; i < __size__; ++i)
+			 if (NULL != checkBoard[i])
+			 {
+			 free(checkBoard[i]);
+			 }
+
+		 free(checkBoard);
+	 }
 
 }
 
@@ -213,7 +207,7 @@ void sudoku::genCheckBoard(){
 
 
 //////////////////////////////////////////////////////////////////////////
-void sudoku::setDirectCheckBoard(int **tmpCheckBorad)
+void sudoku::setDirectCheckBoard(int **tmpCheckBorad)  //在交叉变换中使用
 {
 	for(int i = 0; i < SUDOKU_SIZE_9;i++)
 	{
@@ -232,14 +226,6 @@ void sudoku::setSimpleOneCheckBoard(int x, int y, int value){
 void sudoku::halfRandomGen(int difficulty, int **table)
 {
 		srand(time(NULL));
-		/*
-		table = new int*[9];  
-		for(int i = 0; i < 9; i++)  
-		{  
-			table[i] = new int[9];  
-			memset(table[i],0,sizeof(int)*9);  
-		} 
-		*/
 		src.clear();
 		for (int i = 0; i < 9; ++i)
 			src.push_back(i + 1);

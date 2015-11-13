@@ -18,6 +18,7 @@
 #define SPSTROKECOLOR		RGB(200, 220, 120)	//选中的边框的颜色
 
 
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -31,8 +32,6 @@ CSudokuWYLDlg::CSudokuWYLDlg(CWnd* pParent /*=NULL*/)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
-
-	
 }
 
 void CSudokuWYLDlg::DoDataExchange(CDataExchange* pDX)
@@ -40,7 +39,8 @@ void CSudokuWYLDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_CHECK1, DLXCheckBox);
 	DDX_Control(pDX, IDC_CHECK2, backtrackCheckBox);
-	DDX_Control(pDX, IDC_PROGRESS1, m_progressPanel);
+
+	DDX_Control(pDX, IDC_COMBO1, m_cbBox);
 }
 
 BEGIN_MESSAGE_MAP(CSudokuWYLDlg, CDialogEx)
@@ -48,8 +48,9 @@ BEGIN_MESSAGE_MAP(CSudokuWYLDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CSudokuWYLDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_BUTTON2, &CSudokuWYLDlg::OnBnClickedButton2)
-ON_WM_LBUTTONDBLCLK()
-ON_BN_CLICKED(IDC_BUTTON3, &CSudokuWYLDlg::OnBnClickedButton3)
+	ON_WM_LBUTTONDBLCLK()
+	ON_BN_CLICKED(IDC_BUTTON3, &CSudokuWYLDlg::OnBnClickedButton3)
+	ON_CBN_SELCHANGE(IDC_COMBO1, &CSudokuWYLDlg::cbn_SelectedChange)
 END_MESSAGE_MAP()
 
 
@@ -66,26 +67,42 @@ BOOL CSudokuWYLDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
- 
+
 	mouseX = -1;
 	mouseY = -1;   //初始化mouseX和mouseY
 	canSelected = true;
-	for (int i = 0; i < 9; i++)
-	{
+	sudokuSize = 9;  //初始化为9x9
+
+
+	for (int i = 0; i < 9; i++){
 		for (int j = 0; j < 9; j++)
+		{
 			keyBoardInput[i][j] = 0;
+			m_Sudoku9.setSimpleOneCheckBoard(i, j, 0);
+		}
 	}
-	
-	//对进度条控件进行初始化
-	m_progressPanel.SetRange(0, 100);
-	m_progressPanel.SetPos(0);
-	m_progressPanel.SetStep(1);
-//	GetDlgItem(IDC_PROGRESS1)->ShowWindow(SW_HIDE);  //设置进度条不可见,竟然这样的，老子服了！！
-	m_progressPanel.ShowWindow(SW_HIDE);  //或是这样写
+
+#pragma region sixteen                   
+	for (int i = 0; i < 16; i++){
+		for (int j = 0; j < 16; j++)
+		{
+			p_Sudoku16->setSimpleOneCheckBoard(i, j, 0);
+			keyBoardInput16[i][j] = 0;
+		}
+	}
+
+
+#pragma endregion
 
 
 
-	
+	//初始化复选框
+	m_cbBox.AddString(_T("9x9"));  //1
+	m_cbBox.AddString(_T("16x16"));  // 0
+	m_cbBox.SetCurSel(1);
+
+
+
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -117,7 +134,7 @@ void CSudokuWYLDlg::OnPaint()
 	{
 		CDialogEx::OnPaint();
 	}
-	
+
 	CDC* pDc = GetDC();
 	DrawSudoku(pDc);
 
@@ -131,45 +148,115 @@ HCURSOR CSudokuWYLDlg::OnQueryDragIcon()
 }
 
 
+//复选框
+void CSudokuWYLDlg::cbn_SelectedChange()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	int index = m_cbBox.GetCurSel();
+	sudokuSize = (index == 1) ? 9 : 16;
+	if (sudokuSize == 9)
+	{
+		for (int i = 0; i < 9; i++){
+			for (int j = 0; j < 9; j++)
+			{
+				keyBoardInput[i][j] = 0;
+				m_Sudoku9.setSimpleOneCheckBoard(i, j, 0);
+			}
+		}
+		GetDlgItem(IDC_CHECK3)->EnableWindow(TRUE);   //9x9时，交叉变换可用
+
+	}
+	else if (sudokuSize == 16)
+	{
+
+		for (int i = 0; i < 16; i++){
+			for (int j = 0; j < 16; j++)
+			{
+				p_Sudoku16->setSimpleOneCheckBoard(i, j, 0);
+				keyBoardInput16[i][j] = 0;
+			}
+		}
+		GetDlgItem(IDC_CHECK3)->EnableWindow(FALSE);   //16x16时，交叉变换不可用
+	}
+                 
+	
+	canSelected = true;
+	CDC *pDC = GetDC();
+	DrawSudoku(pDC);
+	Invalidate();
+
+
+}
+
+
 //初盘生成
-void CSudokuWYLDlg::OnBnClickedButton2()           
+void CSudokuWYLDlg::OnBnClickedButton2()
 {
 	CString timeStr;
 	clock_t tStart, tEnd;
-	for (int i = 0; i < 9; i++)      //初盘生成时，先去除以选择的数字记号。还要设置canSelected为false
+	if (sudokuSize == 9)
 	{
-		for (int j = 0; j < 9; j++)
+		for (int i = 0; i < 9; i++)
 		{
-			m_Sudoku.setSimpleOneCheckBoard(i, j, 0);
-			keyBoardInput[i][j] = 0;
+			for (int j = 0; j < 9; j++)
+			{
+				m_Sudoku9.setSimpleOneCheckBoard(i, j, 0);
+				keyBoardInput[i][j] = 0;
+			}
 		}
 	}
+
+	//16x16
+	else{
+		for (int i = 0; i < 16; i++)
+		{
+			for (int j = 0; j < 16; j++)
+			{
+				p_Sudoku16->setSimpleOneCheckBoard(i, j, 0);
+				keyBoardInput16[i][j] = 0;
+			}
+		}
+	}
+
 	canSelected = false;
 	int **tmpCheckBorad = (int**)malloc(9 * sizeof(int*));
-	for(int i = 0; i < 9; i++)  
-	{  
-		tmpCheckBorad[i] = (int*)malloc(9 * sizeof(int));
-	} 
-	if ( BST_CHECKED == IsDlgButtonChecked( IDC_CHECK3 ) )   //交叉变换,  暂时难度设为3，即去掉60个。
+	for (int i = 0; i < 9; i++)
 	{
+		tmpCheckBorad[i] = (int*)malloc(9 * sizeof(int));
+	}
+	if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK3))   //交叉变换,  暂时难度设为3，即去掉60个。
+	{															//交叉变换不支持16x16
 		tStart = clock();
-		m_Sudoku.halfRandomGen(3,tmpCheckBorad);
+		m_Sudoku9.halfRandomGen(3, tmpCheckBorad);
 		tEnd = clock();
 		timeStr.Format(_T("交叉变换生成初盘，用时:%.7f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
-		m_Sudoku.setDirectCheckBoard(tmpCheckBorad);
+		m_Sudoku9.setDirectCheckBoard(tmpCheckBorad);
 	}
 	else   //随机生成
 	{
-		 tStart = clock();
-		 m_Sudoku.genCheckBoard(); 
-		 tEnd = clock();
-		 timeStr.Format(_T("随机生成初盘，用时:%.7f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
-		 GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
-		 m_Sudoku.setCheckBoard();
+		if (sudokuSize == 9)
+		{
+			tStart = clock();
+			m_Sudoku9.genCheckBoard();
+			tEnd = clock();
+			timeStr.Format(_T("随机生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+			GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
+			m_Sudoku9.setCheckBoard();
+		}
+		else
+		{
+			tStart = clock();
+			p_Sudoku16->genCheckBoard();
+			tEnd = clock();
+			timeStr.Format(_T("随机生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+			GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
+			p_Sudoku16->setCheckBoard();
+		}
+
 	}
-	
-	
+
+
 	CDC *pDC = GetDC();
 	DrawSudoku(pDC);
 }
@@ -180,10 +267,39 @@ void CSudokuWYLDlg::calu()
 {
 	CString timeStr;
 	clock_t tStart = clock();
-	bool ret = m_Sudoku.solve();
+	bool ret;
+	if (sudokuSize == 9)
+	{
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_9;j++)
+			{
+				if (m_Sudoku9.getValueFromCheckBoard(i,j) != 0)
+				{
+					keyBoardInput[i][j] = 1;
+				}
+			}
+		}
+		ret = m_Sudoku9.solve();
+	}
+	else
+	{
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				if (p_Sudoku16->getValueFromCheckBoard(i, j) != 0)
+				{
+					keyBoardInput16[i][j] = 1;
+				}
+			}
+		}
+		ret = p_Sudoku16->solve();	
+	}
+
 	clock_t tEnd = clock();
-	timeStr.Format(_T("求解成功！用时:%.7f 秒"),(double)( tEnd - tStart)/CLOCKS_PER_SEC);
-	if(ret)
+	timeStr.Format(_T("求解成功！用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+	if (ret)
 	{
 		canSelected = false;
 		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
@@ -198,44 +314,46 @@ void CSudokuWYLDlg::calu()
 //求解棋盘
 void CSudokuWYLDlg::OnBnClickedButton1()
 {
-	
-	if ( BST_CHECKED == IsDlgButtonChecked( IDC_CHECK1 ) )   //DLX被勾选
+
+	if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK1))   //DLX被勾选
 	{
 
 	}
-	else  if( BST_CHECKED == IsDlgButtonChecked( IDC_CHECK2 ))     //回溯法被勾选
+	else  if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK2))     //回溯法被勾选
 	{
 		calu();
 	}
 }
 
 void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
-{	
-	
-		for(int i=0;i<SUDOKU_SIZE_9;i++)
+{
+
+	//9x9
+	if (sudokuSize == 9){
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)
 		{
-			for(int j=0;j<SUDOKU_SIZE_9;j++)
+			for (int j = 0; j < SUDOKU_SIZE_9; j++)
 			{
-					int tmp = m_Sudoku.getValueFromCheckBoard(i,j);
-					CRect suRect(LEFT+SIZE*j,TOP+SIZE*i,LEFT+SIZE*(j+1),TOP+SIZE*(i+1));
-					DrawRect(pDC, suRect,CELLCOLOR); // 填充小格。			
-					SpDrawStorke(pDC,suRect,STROKECOLOR,2);
-					CString numStr;
-					if (tmp)                               //去除0，使其不显示
-						numStr.Format(_T("%d"),tmp);
-					else numStr = _T("");
-					DrawNumbers(pDC, i, j, numStr, MYNUMCOLOR, CELLCOLOR);
+				int tmp = m_Sudoku9.getValueFromCheckBoard(i, j);
+				CRect suRect(LEFT + SIZE*j, TOP + SIZE*i, LEFT + SIZE*(j + 1), TOP + SIZE*(i + 1));
+				DrawRect(pDC, suRect, CELLCOLOR); // 填充小格。			
+				SpDrawStorke(pDC, suRect, STROKECOLOR, 2);
+				CString numStr;
+				if (tmp)                               //去除0，使其不显示
+					numStr.Format(_T("%d"), tmp);
+				else numStr = _T("");
+				DrawNumbers(pDC, i, j, numStr, MYNUMCOLOR, CELLCOLOR);
 
 			}
-			
+
 		}
-		for (int i = 0; i < SUDOKU_SIZE_9;i++)
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)
 		{
 			for (int j = 0; j < SUDOKU_SIZE_9; j++)
 			{
 				if (keyBoardInput[i][j] == 1){
 					CString selectedNumStr;
-					selectedNumStr.Format(_T("%d"),m_Sudoku.getValueFromCheckBoard(i, j));
+					selectedNumStr.Format(_T("%d"), m_Sudoku9.getValueFromCheckBoard(i, j));
 					DrawNumbers(pDC, i, j, selectedNumStr, SELECTEDNUMCOLOR, CELLCOLOR);
 				}
 			}
@@ -250,7 +368,52 @@ void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
 				SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
 			}
 		}
-		
+	}
+	//16x16
+#pragma region sixteen
+	else if (sudokuSize == 16){
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				int tmp = p_Sudoku16->getValueFromCheckBoard(i, j);
+				CRect suRect(LEFT + SIZE*j, TOP + SIZE*i, LEFT + SIZE*(j + 1), TOP + SIZE*(i + 1));
+				DrawRect(pDC, suRect, CELLCOLOR); // 填充小格。			
+				SpDrawStorke(pDC, suRect, STROKECOLOR, 2);
+				CString numStr;
+				if (tmp)                               //去除0，使其不显示
+					numStr.Format(_T("%d"), tmp);
+				else numStr = _T("");
+				DrawNumbers(pDC, i, j, numStr, MYNUMCOLOR, CELLCOLOR);
+
+			}
+
+		}
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				if (keyBoardInput16[i][j] == 1){
+					CString selectedNumStr;
+					selectedNumStr.Format(_T("%d"), p_Sudoku16->getValueFromCheckBoard(i, j));
+					DrawNumbers(pDC, i, j, selectedNumStr, SELECTEDNUMCOLOR, CELLCOLOR);
+				}
+			}
+		}
+
+		//画宫线
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				CRect gongRect(LEFT + SIZE*i * 4, TOP + SIZE*j * 4, LEFT + SIZE * 4 * (i + 1), TOP + SIZE * 4 * (j + 1));
+				SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
+			}
+		}
+	}
+#pragma endregion
+
+
 }
 
 void CSudokuWYLDlg::DrawRect(CDC*pDC, CRect rect, COLORREF color)
@@ -263,7 +426,7 @@ void CSudokuWYLDlg::DrawRect(CDC*pDC, CRect rect, COLORREF color)
 }
 
 //填数字
-void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j,CString numStr,COLORREF textColor,COLORREF bkColor)
+void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j, CString numStr, COLORREF textColor, COLORREF bkColor)
 {
 	CFont font;
 	font.CreateFont(
@@ -284,19 +447,27 @@ void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j,CString numStr,COLORREF te
 	CFont*def_font = pDC->SelectObject(&font);
 	pDC->SetTextColor(textColor);
 	pDC->SetBkColor(bkColor); //bkColor和brush颜色一致！
-	pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE/5, numStr);
+	if (sudokuSize == 9)
+	{
+		pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);
+	}
+	else //16x16的棋盘的数字位置
+	{
+		pDC->TextOut(LEFT + SIZE*j + SIZE / 4, TOP + SIZE*i + SIZE / 5, numStr);
+	}
+	
 }
 
-void CSudokuWYLDlg::SpDrawStorke(CDC *pDC, CRect rect, COLORREF color,int stroke)
+void CSudokuWYLDlg::SpDrawStorke(CDC *pDC, CRect rect, COLORREF color, int stroke)
 {
-	CPen tmpPen(PS_SOLID,stroke,color);
+	CPen tmpPen(PS_SOLID, stroke, color);
 	CPen *pOldPen;
-	pOldPen=pDC->SelectObject(&tmpPen);
-	pDC->MoveTo(rect.left,rect.top);
-	pDC->LineTo(rect.left+rect.Width(),rect.top);
-	pDC->LineTo(rect.left+rect.Width(),rect.top+rect.Height());
-	pDC->LineTo(rect.left,rect.top+rect.Height());
-	pDC->LineTo(rect.left,rect.top);
+	pOldPen = pDC->SelectObject(&tmpPen);
+	pDC->MoveTo(rect.left, rect.top);
+	pDC->LineTo(rect.left + rect.Width(), rect.top);
+	pDC->LineTo(rect.left + rect.Width(), rect.top + rect.Height());
+	pDC->LineTo(rect.left, rect.top + rect.Height());
+	pDC->LineTo(rect.left, rect.top);
 	pDC->SelectObject(pOldPen);
 
 }
@@ -310,37 +481,72 @@ void CSudokuWYLDlg::SpDrawStorke(CDC *pDC, CRect rect, COLORREF color,int stroke
 void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 {
 	// TODO:  在此添加消息处理程序代码和/或调用默认值
-	
+
 	CDC *pDC = GetDC();
-	GetCursorPos(&point);               
+	GetCursorPos(&point);
 	ScreenToClient(&point);
-	double docx = point.x;           
+	double docx = point.x;
 	double docy = point.y;
-	if (canSelected == true)  
-	{
-		if (docx < LEFT + SIZE * 9 && docx > LEFT && docy > TOP && docy < TOP + SIZE * 9)
+
+	//9x9
+	if (sudokuSize == 9){
+		if (canSelected == true)
 		{
-			mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
-			mouseX = (docy - TOP) / SIZE;
-			CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
-				LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
-
-			DrawRect(pDC, selectedRect, CELLCOLOR);				//将选中的各自以原有颜色填充
-			SpDrawStorke(pDC, selectedRect,SPSTROKECOLOR, 2);       //双击时修改格子边框为 "特殊颜色"。
-
-		}
-
-		//为了防止数字更改引起宫线改变，需要重绘宫线
-		for (int i = 0; i < 3; i++)
-		{
-			for (int j = 0; j < 3; j++)
+			if (docx < LEFT + SIZE * 9 && docx > LEFT && docy > TOP && docy < TOP + SIZE * 9)
 			{
-				CRect gongRect(LEFT + SIZE*i * 3, TOP + SIZE*j * 3, LEFT + SIZE * 3 * (i + 1), TOP + SIZE * 3 * (j + 1));
-				SpDrawStorke(pDC, gongRect,GONGCOLOR, 4);
+				mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
+				mouseX = (docy - TOP) / SIZE;
+				CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
+					LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
+
+				DrawRect(pDC, selectedRect, CELLCOLOR);				//将选中的各自以原有颜色填充
+				SpDrawStorke(pDC, selectedRect, SPSTROKECOLOR, 2);       //双击时修改格子边框为 "特殊颜色"。
+
+			}
+
+			//为了防止数字更改引起宫线改变，需要重绘宫线
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					CRect gongRect(LEFT + SIZE*i * 3, TOP + SIZE*j * 3, LEFT + SIZE * 3 * (i + 1), TOP + SIZE * 3 * (j + 1));
+					SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
+				}
 			}
 		}
 	}
-	
+#pragma region sixteen
+	//16x16
+	if (sudokuSize == 16){
+		if (canSelected == true)
+		{
+			if (docx < LEFT + SIZE * 16 && docx > LEFT && docy > TOP && docy < TOP + SIZE * 16)
+			{
+				mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
+				mouseX = (docy - TOP) / SIZE;
+				CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
+					LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
+
+				DrawRect(pDC, selectedRect, CELLCOLOR);				//将选中的各自以原有颜色填充
+				SpDrawStorke(pDC, selectedRect, SPSTROKECOLOR, 2);       //双击时修改格子边框为 "特殊颜色"。
+
+			}
+
+			//为了防止数字更改引起宫线改变，需要重绘宫线
+			for (int i = 0; i < 4; i++)
+			{
+				for (int j = 0; j < 4; j++)
+				{
+					CRect gongRect(LEFT + SIZE*i * 4, TOP + SIZE*j * 4, LEFT + SIZE * 4 * (i + 1), TOP + SIZE * 4 * (j + 1));
+					SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
+				}
+			}
+		}
+	}
+#pragma endregion
+
+
+
 
 	CDialogEx::OnLButtonDblClk(nFlags, point);
 }
@@ -349,48 +555,100 @@ void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 
 BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 {
+//为了防止通过键盘使得combox获得焦点，从而造成9x9和16x16的界面转换
+//推荐每次进行界面转换后，重置一下棋盘，使得combox失去焦点
 
 	CDC *pDC = GetDC();
-	if (0 <= mouseX && mouseX <= 8 && mouseY >= 0 && mouseY <= 8)
+	//9x9
+	if (sudokuSize == 9)
 	{
-		if (pMsg->message == WM_KEYDOWN)
+		if (0 <= mouseX && mouseX <= 8 && mouseY >= 0 && mouseY <= 8)
 		{
-			int keyValue = pMsg->wParam;
-			if (keyValue >= 49 && keyValue <= 57) //规定设置值为1~9
+			if (pMsg->message == WM_KEYDOWN)
 			{
-				int inValue = keyValue - 48;
-				CString numStr;
-				numStr.Format(_T("%d"), inValue);
-
-				//判断输入是否符合要求
-				if (!m_Sudoku.isValid(mouseX,mouseY,inValue))
+				int keyValue = pMsg->wParam;
+				if (keyValue >= 49 && keyValue <= 57) //规定设置值为1~9
 				{
-					MessageBox(_T("输入不合法"));
+					int inValue = keyValue - 48;
+					CString numStr;
+					numStr.Format(_T("%d"), inValue);
+
+					//判断输入是否符合要求
+					if (!m_Sudoku9.isValid(mouseX, mouseY, inValue))
+					{
+						MessageBox(_T("输入不合法"));
+						CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
+							LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
+						SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+					}
+					else
+					{
+						m_Sudoku9.setSimpleOneCheckBoard(mouseX, mouseY, inValue);
+						DrawNumbers(pDC, mouseX, mouseY, numStr, SELECTEDNUMCOLOR, CELLCOLOR);
+						keyBoardInput[mouseX][mouseY] = 1;			//当输入数字后，才能设置为1				
+					}
+
+				}
+				else  //其他输入默认为空
+				{
+					CString numDefaultStr;
+					numDefaultStr.Format(_T(""));
+					DrawNumbers(pDC, mouseX, mouseY, numDefaultStr, SELECTEDNUMCOLOR, CELLCOLOR);
 					CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 						LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
-					SpDrawStorke(pDC, selectedRect,STROKECOLOR, 2);           //还原选中框颜色
-				}
-				else
-				{
-					m_Sudoku.setSimpleOneCheckBoard(mouseX, mouseY, inValue);
-					DrawNumbers(pDC, mouseX, mouseY, numStr, SELECTEDNUMCOLOR, CELLCOLOR);
-					keyBoardInput[mouseX][mouseY] = 1;			//当输入数字后，才能设置为1
+					SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
 				}
 
-			}
-			else  //其他输入默认为空
-			{
-				CString numDefaultStr;
-				numDefaultStr.Format(_T(""));
-				DrawNumbers(pDC, mouseX, mouseY, numDefaultStr, SELECTEDNUMCOLOR, CELLCOLOR);
-				CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
-					LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
-				SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
-			}
 
-
+			}
 		}
 	}
+	//16x16
+#pragma region sixteen
+	else
+	{
+		if (0 <= mouseX && mouseX <= 15 && mouseY >= 0 && mouseY <= 15)
+		{
+			if (pMsg->message == WM_KEYDOWN)
+			{
+				int keyValue = pMsg->wParam;
+				if (keyValue >= 49 && keyValue <= 57) //
+				{
+					int inValue = keyValue - 48;
+					CString numStr;
+					numStr.Format(_T("%d"), inValue);
+
+					//判断输入是否符合要求
+					if (!p_Sudoku16->isValid(mouseX, mouseY, inValue))
+					{
+						MessageBox(_T("输入不合法"));
+						CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
+							LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
+						SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+					}
+					else
+					{
+						p_Sudoku16->setSimpleOneCheckBoard(mouseX, mouseY, inValue);
+						DrawNumbers(pDC, mouseX, mouseY, numStr, SELECTEDNUMCOLOR, CELLCOLOR);
+						keyBoardInput16[mouseX][mouseY] = 1;			//当输入数字后，才能设置为1				
+					}
+
+				}
+				else  //其他输入默认为空
+				{
+					CString numDefaultStr;
+					numDefaultStr.Format(_T(""));
+					DrawNumbers(pDC, mouseX, mouseY, numDefaultStr, SELECTEDNUMCOLOR, CELLCOLOR);
+					CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
+						LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
+					SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+				}
+
+
+			}
+		}
+	}
+#pragma endregion
 
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
@@ -402,17 +660,32 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 	mouseX = -1;
 	mouseY = -1;
 	canSelected = true;
-	for (int i = 0; i < 9; i++)
+	if (sudokuSize == 9)
 	{
-		for (int j = 0; j < 9; j++)
+		for (int i = 0; i < 9; i++)
 		{
-			m_Sudoku.setSimpleOneCheckBoard(i, j, 0);
-			keyBoardInput[i][j] = 0;
+			for (int j = 0; j < 9; j++)
+			{
+				m_Sudoku9.setSimpleOneCheckBoard(i, j, 0);
+				keyBoardInput[i][j] = 0;
+			}
 		}
 	}
-	
-	
+	else
+	{
+		for (int i = 0; i < 16; i++)
+		{
+			for (int j = 0; j < 16; j++)
+			{
+				p_Sudoku16->setSimpleOneCheckBoard(i, j, 0);
+				keyBoardInput16[i][j] = 0;
+			}
+		}
+	}
+
+
 	Invalidate();
+
 }
 
 
@@ -420,4 +693,5 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 //////////////////////////////////////////////////////////////////////////
 //用GetDC()，是相对于document区域的左上角。
 //如果用GetWindowDC()，导致都是窗口的左上角为绘画原点的。
+
 

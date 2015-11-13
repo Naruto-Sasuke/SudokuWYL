@@ -44,11 +44,14 @@ public:
 	//int  GetKeyBoardInput(int i, int j);                    //得到keyBoardInput的某个位置的值
 
 private:
-	sudoku m_Sudoku; 
+	sudoku m_Sudoku9; 
+	sudoku *p_Sudoku16 = new sudoku(16);    //难道一定要这样初始化？？
+	int sudokuSize;		//9或者16
 	int mouseX;        //数独内双击鼠标的格子编号
 	int mouseY;
 	bool canSelected;    //表示当前数独状态能否选择格子
 	bool keyBoardInput[SUDOKU_SIZE_9][SUDOKU_SIZE_9];  //记录哪些位置是键盘输入的值，以便进行颜色标记。
+	bool keyBoardInput16[SUDOKU_SIZE_16][SUDOKU_SIZE_16];  //
 
 public:
 	afx_msg void OnBnClickedButton2();
@@ -56,6 +59,7 @@ public:
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	afx_msg void OnBnClickedButton3();
-	// 进度条
-	CProgressCtrl m_progressPanel;
+	// 数独大小复选框
+	CComboBox m_cbBox;
+	afx_msg void cbn_SelectedChange();
 };

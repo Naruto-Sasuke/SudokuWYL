@@ -4,10 +4,10 @@
 // sudoku
 
 #define SUDOKU_SIZE_9 9
-#define SUDOKU_SIZE_25 25
+#define SUDOKU_SIZE_16 16
 #define minSeedNum 17
 #define maxSeedNum 35
-#define		SIZE		30		
+#define		SIZE		35		
 #define		TOP			50		
 #define		LEFT		50		
 
@@ -67,7 +67,7 @@ inline bool hasSpace(const void* ptr){
 
 class sudoku {
 public:
-	sudoku(int _size_  = 9);
+	sudoku(int _size_ =9);      //....
 	 virtual ~sudoku();
 
 	int getValueFromCheckBoard(int i,int j);   //新增的，得到CheckBoard的[i][j]值
