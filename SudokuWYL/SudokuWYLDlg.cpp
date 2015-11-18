@@ -182,12 +182,15 @@ void CSudokuWYLDlg::cbn_SelectedChange()
 				keyBoardInput16[i][j] = 0;
 			}
 		}
-		GetDlgItem(IDC_CHECK3)->EnableWindow(FALSE);   //16x16时，交叉变换不可用
-		GetDlgItem(IDC_EDIT1)->EnableWindow(FALSE);
+		GetDlgItem(IDC_CHECK3)->EnableWindow(FALSE);     //16x16时，交叉变换不可用
+		CButton* pBtn = (CButton*)GetDlgItem(IDC_CHECK3);  //同时设置checkbox为为选中
+		pBtn->SetCheck(0);
+		GetDlgItem(IDC_EDIT1)->EnableWindow(FALSE);		//16x16时，输入框变成空 
+		GetDlgItem(IDC_EDIT1)->SetWindowTextW(_T(""));
 	}
-	GetDlgItem(IDC_STATIC)->SetWindowTextW(_T(""));
-	GetDlgItem(IDC_BUTTON4)->EnableWindow(FALSE);
-	
+	GetDlgItem(IDC_STATIC)->SetWindowTextW(_T(""));		 //下面的提示文字清空
+	GetDlgItem(IDC_BUTTON4)->EnableWindow(FALSE);				//“显示DLX版本”按钮设置为不可用，并还原文字
+	GetDlgItem(IDC_BUTTON4)->SetWindowTextW(_T("显示DLX版本"));
 	canSelected = true;
 	CDC *pDC = GetDC();
 	DrawSudoku(pDC);
