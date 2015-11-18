@@ -16,6 +16,7 @@
 #define MYNUMCOLOR			RGB(118, 77, 57)	//普通数字的颜色
 #define GONGCOLOR			RGB(100, 210, 130)  //宫的颜色
 #define SPSTROKECOLOR		RGB(200, 220, 120)	//选中的边框的颜色
+#define LITTLENUMCOLOR		RGB(175, 18,  88)	//小字颜色		
 
 
 
@@ -51,6 +52,7 @@ BEGIN_MESSAGE_MAP(CSudokuWYLDlg, CDialogEx)
 	ON_WM_LBUTTONDBLCLK()
 	ON_BN_CLICKED(IDC_BUTTON3, &CSudokuWYLDlg::OnBnClickedButton3)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CSudokuWYLDlg::cbn_SelectedChange)
+	ON_BN_CLICKED(IDC_BUTTON4, &CSudokuWYLDlg::OnBnClickedButton4)
 END_MESSAGE_MAP()
 
 
@@ -72,6 +74,9 @@ BOOL CSudokuWYLDlg::OnInitDialog()
 	mouseY = -1;   //初始化mouseX和mouseY
 	canSelected = true;
 	sudokuSize = 9;  //初始化为9x9
+	//BUTTON4是“显示DLX版本”按钮，针对DLX求解生成的终盘与回溯法生成的终盘不一致时才可用。
+	GetDlgItem(IDC_BUTTON4)->EnableWindow(FALSE);
+	 backTrackSameWithDlx = true;      //默认两种方法生成的棋盘一致
 
 
 	for (int i = 0; i < 9; i++){
@@ -164,6 +169,7 @@ void CSudokuWYLDlg::cbn_SelectedChange()
 			}
 		}
 		GetDlgItem(IDC_CHECK3)->EnableWindow(TRUE);   //9x9时，交叉变换可用
+		GetDlgItem(IDC_EDIT1)->EnableWindow(TRUE);   
 
 	}
 	else if (sudokuSize == 16)
@@ -177,8 +183,10 @@ void CSudokuWYLDlg::cbn_SelectedChange()
 			}
 		}
 		GetDlgItem(IDC_CHECK3)->EnableWindow(FALSE);   //16x16时，交叉变换不可用
+		GetDlgItem(IDC_EDIT1)->EnableWindow(FALSE);
 	}
-                 
+	GetDlgItem(IDC_STATIC)->SetWindowTextW(_T(""));
+	GetDlgItem(IDC_BUTTON4)->EnableWindow(FALSE);
 	
 	canSelected = true;
 	CDC *pDC = GetDC();
@@ -357,7 +365,18 @@ void CSudokuWYLDlg::caluDlx()
 	    tEnd1 = clock();
 		p_SudokuDlx9->setCheckBoard();        //dlx对象读取棋盘
 		ret = p_SudokuDlx9->solve();       //用dlx类进行solve
-		p_SudokuDlx9->outPutCheckBoard("../outDlx9.txt", false);   //测试dlx生成的是否相同
+		p_SudokuDlx9->outPutCheckBoard("../outDlx9.txt", false);   //输出dlx生成的数独
+		//检测两种版本是否一致
+		for (int i = 0; i < SUDOKU_SIZE_9;i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_9; j++)
+			{
+				if (m_Sudoku9.getValueFromCheckBoard(i,j) != p_SudokuDlx9->getValue(i,j))
+				{
+					backTrackSameWithDlx = false;
+				}
+			}
+		}
 	}
 	else
 	{
@@ -378,10 +397,30 @@ void CSudokuWYLDlg::caluDlx()
 		p_SudokuDlx16->setCheckBoard();        //dlx对象读取棋盘
 		ret = p_SudokuDlx16->solve();    //用dlx类进行solve
 		p_SudokuDlx16->outPutCheckBoard("../outDlx16.txt", false);   //测试dlx生成的是否相同
+		//检测两种版本是否一致
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				if (p_Sudoku16->getValueFromCheckBoard(i, j) != p_SudokuDlx16->getValue(i, j))
+				{
+					backTrackSameWithDlx = false;
+				}
+			}
+		}
 	}
 
     tEnd2 = clock();         //tEnd2-tEnd1是dlx方法
-	timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒"), (double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC,(double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+	if (backTrackSameWithDlx)
+	{
+		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒"), (double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+	}
+	else
+	{
+		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒,两种方法生成的棋盘不同。"), \
+			(double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+		GetDlgItem(IDC_BUTTON4)->EnableWindow(TRUE);   
+	}
 	if (ret)
 	{
 		canSelected = false;
@@ -409,6 +448,7 @@ void CSudokuWYLDlg::OnBnClickedButton1()
 	{
 		calu();
 	}
+	
 }
 
 void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
@@ -518,7 +558,7 @@ void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j, CString numStr, COLORREF 
 {
 	CFont font;
 	font.CreateFont(
-		20,                        // nHeight
+		17,                        // nHeight
 		0,                         // nWidth
 		0,                         // nEscapement
 		0,                         // nOrientation
@@ -552,6 +592,8 @@ void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j, CString numStr, COLORREF 
 	}
 	
 }
+
+
 
 void CSudokuWYLDlg::SpDrawStorke(CDC *pDC, CRect rect, COLORREF color, int stroke)
 {
@@ -777,7 +819,10 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 			}
 		}
 	}
-
+	backTrackSameWithDlx = true;
+	GetDlgItem(IDC_BUTTON4)->SetWindowTextW(_T("显示DLX版本"));
+	GetDlgItem(IDC_BUTTON4)->EnableWindow(FALSE);
+	GetDlgItem(IDC_STATIC)->SetWindowTextW(_T(""));
 
 	Invalidate();
 
@@ -789,12 +834,178 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 //用GetDC()，是相对于document区域的左上角。
 //如果用GetWindowDC()，导致都是窗口的左上角为绘画原点的。
 /************************************************************************/
-/* 在有DLX后，时间相减得到一个数组，通过判断bool数组的true多还是false多，从而
-判断回溯法和DLX方法的好坏。*/
-/************************************************************************/
-/************************************************************************/
 /*								使用说明                                 */
 /*1.在通过复选框更换棋盘大小时，最好要按一下“棋盘重置”，使得复选框失去焦点，否则
 输入数字“1,9”时会使得棋盘界面更改。
   2.只能通过棋盘上方的数字键“1~9”和“a~g（仅在16x16棋盘有效，分别代表10~16）”
 /************************************************************************/
+
+
+#pragma region OnlyUsedInDlxDiff
+//下面的只在"显示DLX"按钮可用，并点击时才调用
+
+//“显示DLX版本”按钮
+void CSudokuWYLDlg::OnBnClickedButton4()
+{
+	CDC *pDC = GetDC();
+	CString btnStr;
+	GetDlgItem(IDC_BUTTON4)->GetWindowTextW(btnStr);
+	if (btnStr == _T("显示DLX版本"))
+	{
+		GetDlgItem(IDC_BUTTON4)->SetWindowTextW(_T("隐藏回溯法棋盘"));
+		DrawSudokuDLX(pDC,true);
+	}
+	else
+	{
+		GetDlgItem(IDC_BUTTON4)->SetWindowTextW(_T("显示DLX版本"));
+		DrawSudokuDLX(pDC, false);
+	}
+	
+}
+//dlx版本的数独占主体（大字），回溯法的在右下角以小字显示
+void CSudokuWYLDlg::DrawSudokuDLX(CDC* pDC,bool showLittleNums)
+{
+	//9x9
+	if (sudokuSize == 9){
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_9; j++)
+			{
+				int tmp = p_SudokuDlx9->getValue(i, j);
+				CRect suRect(LEFT + SIZE*j, TOP + SIZE*i, LEFT + SIZE*(j + 1), TOP + SIZE*(i + 1));
+				DrawRect(pDC, suRect, CELLCOLOR); // 填充小格。			
+				SpDrawStorke(pDC, suRect, STROKECOLOR, 2);
+				CString numDLXStr;
+				numDLXStr.Format(_T("%d"), tmp);
+				DrawNumbers(pDC, i, j, numDLXStr, MYNUMCOLOR, CELLCOLOR);
+				int tmpBackTrack = m_Sudoku9.getValueFromCheckBoard(i, j);
+				if (tmp!=tmpBackTrack)		//两种方法生成的数字不相同
+				{
+					CString numTrackStr;
+					numTrackStr.Format(_T("%d"), tmpBackTrack);
+					if (showLittleNums)			//显示回溯法棋盘
+						DrawBackTrackLittleNums(pDC, i, j, numTrackStr, LITTLENUMCOLOR, CELLCOLOR);
+				}
+
+			}
+
+		}
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)   //将初盘的有数字的位置以特殊的颜色显示
+		{
+			for (int j = 0; j < SUDOKU_SIZE_9; j++)
+			{
+				if (keyBoardInput[i][j] == 1){
+					CString selectedNumStr;
+					selectedNumStr.Format(_T("%d"), m_Sudoku9.getValueFromCheckBoard(i, j));
+					DrawNumbers(pDC, i, j, selectedNumStr, SELECTEDNUMCOLOR, CELLCOLOR);
+				}
+			}
+		}
+		//画宫线
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				CRect gongRect(LEFT + SIZE*i * 3, TOP + SIZE*j * 3, LEFT + SIZE * 3 * (i + 1), TOP + SIZE * 3 * (j + 1));
+				SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
+			}
+		}
+
+
+	}
+	//16x16
+#pragma region sixteen
+	else if (sudokuSize == 16){
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				int tmp = p_SudokuDlx16->getValue(i, j);
+				CRect suRect(LEFT + SIZE*j, TOP + SIZE*i, LEFT + SIZE*(j + 1), TOP + SIZE*(i + 1));
+				DrawRect(pDC, suRect, CELLCOLOR); // 填充小格。			
+				SpDrawStorke(pDC, suRect, STROKECOLOR, 2);
+				CString numDLXStr;
+				numDLXStr.Format(_T("%d"), tmp);
+				DrawNumbers(pDC, i, j, numDLXStr, MYNUMCOLOR, CELLCOLOR);
+				int tmpBackTrack = p_Sudoku16->getValueFromCheckBoard(i, j);
+				if (tmp != tmpBackTrack)		//两种方法生成的数字不相同
+				{
+					CString numTrackStr;
+					numTrackStr.Format(_T("%d"), tmpBackTrack);
+					if (showLittleNums)
+						DrawBackTrackLittleNums(pDC, i, j, numTrackStr, LITTLENUMCOLOR, CELLCOLOR);
+				}
+
+			}
+
+		}
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)        //将初盘的有数字的位置以特殊的颜色显示
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				if (keyBoardInput16[i][j] == 1){
+					CString selectedNumStr;
+					selectedNumStr.Format(_T("%d"), p_Sudoku16->getValueFromCheckBoard(i, j));
+					DrawNumbers(pDC, i, j, selectedNumStr, SELECTEDNUMCOLOR, CELLCOLOR);
+				}
+			}
+		}
+
+		//画宫线
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				CRect gongRect(LEFT + SIZE*i * 4, TOP + SIZE*j * 4, LEFT + SIZE * 4 * (i + 1), TOP + SIZE * 4 * (j + 1));
+				SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
+			}
+		}
+	}
+#pragma endregion
+
+
+}
+//显示回溯法棋盘（以小字显示）
+void CSudokuWYLDlg::DrawBackTrackLittleNums(CDC*pDC, int i, int j, CString numStr, COLORREF textColor, COLORREF bkColor)
+{
+	CFont font;
+	font.CreateFont(
+		10,                        // nHeight
+		0,                         // nWidth
+		0,                         // nEscapement
+		0,                         // nOrientation
+		FW_NORMAL,                 // nWeight
+		FALSE,                     // bItalic
+		FALSE,                     // bUnderline
+		0,                         // cStrikeOut
+		ANSI_CHARSET,              // nCharSet
+		OUT_DEFAULT_PRECIS,        // nOutPrecision
+		CLIP_DEFAULT_PRECIS,       // nClipPrecision
+		DEFAULT_QUALITY,           // nQuality
+		DEFAULT_PITCH | FF_SWISS,  // nPitchAndFamily
+		_T("SimHei"));             // lpszFacename
+	CFont*def_font = pDC->SelectObject(&font);
+	pDC->SetTextColor(textColor);
+	pDC->SetBkColor(bkColor);	   //bkColor和brush颜色一致！
+	int num = _ttoi(numStr);      //CString转int
+	if (num > 0){
+		if (sudokuSize == 9)
+		{
+			pDC->TextOut(LEFT + SIZE*j + SIZE*2.0 / 3, TOP + SIZE*i + SIZE*3.0 / 5, numStr);
+		}
+		else //16x16的棋盘的数字位置
+		{
+
+			if (num >= 10) //2位数
+				pDC->TextOut(LEFT + SIZE*j + SIZE*3.0 / 5, TOP + SIZE*i + SIZE*3.0 / 5+SIZE*1.0/10, numStr);
+			else
+				pDC->TextOut(LEFT + SIZE*j + SIZE *2.0/ 3, TOP + SIZE*i + SIZE*3.0 / 5+SIZE*1.0/10, numStr);
+		}
+	}
+}
+
+
+
+#pragma endregion
+
+
