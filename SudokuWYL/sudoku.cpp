@@ -193,9 +193,8 @@ void sudoku::genCheckBoard(){
 			vec.push_back(it->first);
 	}
 	bool ok = false;
-	initDfs(vec, ok, 0);
-	//	outPutCheckBoard("data/in.txt", false);       //修改了     
-	outPutCheckBoard("../in.txt", false);
+	initDfs(vec, ok, 0);    
+	outPutCheckBoard("../in.txt", false);      //output才是输出内容
 
 
 	if(solve() == false)
@@ -342,131 +341,254 @@ void sudoku::halfRandomGen(int difficulty, int **table)
 			}
 		}
 
-		difficulty *= 20;
-		while (difficulty--)
+		int numZeros = 0;
+		if (difficulty > 64)   //设置最小的数目为17
 		{
-			table[rand() % 9][rand() % 9] = 0;
+			difficulty = 64;
+		}
+		                         
+		while (numZeros!=difficulty)
+		{
+			int x = rand() % 9;
+			int y = rand() % 9;
+			if (table[x][y]){
+				table[x][y] = 0;
+				numZeros++;
+			}			
 		}	
 }
 
-//SudokuDlx::SudokuDlx(const int _size_){
-//	__size__ = _size_;
-//	int sqt = (int)sqrt(__size__);
-//	__size__ = sqt * sqt;
-//	int len = 4 * __size__ * __size__ * __size__\
-//		+ __size__ + 1;
-//	L = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(L)) exit(1);
-//	R = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(R)) exit(1);
-//	U = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(U)) exit(1);
-//	D = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(D)) exit(1);
-//	Col = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(Col)) exit(1);
-//	Vis = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(Vis)) exit(1);
-//	Row = (int*)malloc(len * sizeof(int));
-//	if(false == hasSpace(Row)) exit(1);
-//	H = (int*)malloc(__size__ + 1);
-//	if(false == hasSpace(H)) exit(1);
-//	S = (int*)malloc(__size__ + 1);
-//	if(false == hasSpace(S)) exit(1);
-//	Ans = (int*)malloc(__size__ * __size__ * __size__);
-//	if(false == hasSpace(Ans)) exit(1);
-//	for(int i = 0; i <= __size__; ++i){
-//		S[i] = 0;
-//		L[i] = i - 1;
-//		R[i] = i + 1;
-//		U[i] = D[i] = i;
-//	}
-//	L[0] = __size__, R[__size__] = 0;
-//	num = __size__;
-//	for(int i = 1; i <= __size__; ++i) H[i] = -1;
-//}
-//
-//SudokuDlx::~SudokuDlx(){
-//	free(L);
-//	free(R);
-//	free(U);
-//	free(D);
-//	free(S);
-//	free(H);
-//	free(Col);
-//	free(Row);
-//}
-//
-//void SudokuDlx::link(const int r, const int c){
-//	++S[Col[++num] = c];
-//	Row[num] = r;
-//	D[num] = D[c];
-//	U[D[c]] = num;
-//	U[num] = c;
-//	D[c] = num;
-//	if(H[r] < 0) H[r] = L[num] = R[num] = num;
-//	else{
-//		R[num] = R[H[r]];
-//		L[R[H[r]]] = num;
-//		L[num] = H[r];
-//		R[H[r]] = num;
-//	}
-//}
-//
-//void SudokuDlx::remove(int c){
-//	L[R[c]] = L[c];
-//	R[L[c]] = R[c];
-//	for(int i = D[c]; i != c; i = D[i]){
-//		for(int j = R[i]; j != i; j = R[j]){
-//			U[D[j]] = U[j];
-//			D[U[j]] = D[j];
-//			--S[Col[j]];
-//		}
-//	}
-//}
-//
-//void SudokuDlx::resume(int c){
-//	for(int i = U[c]; i != c; i = U[i]){
-//		for(int j = L[i]; j != i; j = L[j]){
-//			++S[Col[U[D[j]]=D[U[j]]=j]];
-//		}
-//	}
-//	L[R[c]] = R[L[c]] = c;
-//}
-//
-//bool SudokuDlx::dance(int dep){
-//	if(R[0] == 0){
-//		return true;
-//	}
-//	int c = R[0];
-//	for(int i = R[0]; i != 0; i = R[i])
-//		if(S[i] < S[c]) c = i;
-//	remove(c);
-//	for(int i = D[c]; i != c; i = D[i]){
-//		Ans[dep] = Row[i];
-//		for(int j = R[i]; j != i; j = R[j]) remove(Col[j]);
-//		if(dance(dep + 1)) return true;
-//		for(int j = L[i]; j != i; j = L[j]) resume(Col[j]);
-//	}
-//	resume(c);
-//	return false;
-//}
-//
-//bool SudokuDlx::solve(){
-//	if(false == dance(0)) return false;
-//	return true;
-//}
-//
-//void SudokuDlx::setCheckBoard(){
-//	int tmp;
-//	for(int i = 0; i < __size__; ++i){
-//		for(int j = 0; j < __size__; ++j){
-//			inData(std::cin, tmp);
-//			if(tmp == 0){
-//
-//			}else{
-//
-//			}
-//		}
-//	}
-//}
+/*=====================我是两个类的分界线=================*/
+
+
+
+
+/*
+*
+*SudokuDlx类的使用方法：
+*
+*  你只需要关注三个函数（接口）：
+*
+*      1.setCheckBoard(): 设置棋盘
+*      2.设置完成就可以求解：solve()
+*      3.求解之后获取某个位置的值：getValue(x, y)
+*
+*      通过不断使用getValue()可以完成你需要的所有操作
+*
+*      其余私有函数不需要关注，当成暗盒即可。
+*
+*/
+
+
+//===========下面是三个函数的说明=============
+
+
+/*
+* setCheckBoard()设置棋盘，默认的输入源
+* 是从标准输入（cin），你自己可以改变输入源
+* 通过输入重定向或者直接修改下面的代码也行。
+*/
+void SudokuDlx::setCheckBoard(){
+	int tmp;
+	reSet();
+	fstream fs;
+	fs.open("../in.txt", ios::in);
+	//for (int i = 0; i < __size__; ++i){
+	//	for (int j = 0; j < __size__; ++j){
+	//		inData(fs, checkBoard[i][j]);
+	//	}
+	//}
+
+	for (int i = 0; i < __size__; ++i){
+		for (int j = 0; j < __size__; ++j){
+			inData(fs, tmp);
+			//inData(std::cin, tmp); //在此修改输入源
+			if (tmp != 0){
+				insert(i, j, tmp);
+			}
+			else{
+				for (int k = 1; k <= __size__; ++k){
+					insert(i, j, k);
+				}
+			}
+		}
+	}
+	fs.close();
+}
+
+/*
+*solve()去解决这个数独问题，返回一个布尔值
+true表示求解成功，false表示失败，棋盘无解。
+如果求解成功，那么会将答案保存在target这个二维数组中。
+*/
+bool SudokuDlx::solve(){
+	isSolved = dance(0);
+	if (false == isSolved) return false;
+	for (int i = 0; i < ansd; ++i){
+		target[(Ans[i] - 1) / __size__] = (Ans[i] - 1) % __size__ + 1;
+	}
+	return true;
+}
+
+/*
+*getValue(int x, int y)对外开放的接口，
+用于获取求解之后在x，y位置的值，若是目
+前没有得到解，那么返回-1
+*
+*/
+int SudokuDlx::getValue(const int x, const int y){
+	if (isSolved) return target[x * __size__ + y];
+	else return -1;
+}
+
+void SudokuDlx::link(const int r, const int c){
+	++S[Col[++size] = c];
+	Row[size] = r;
+	D[size] = D[c];
+	U[D[c]] = size;
+	U[size] = c;
+	D[c] = size;
+	if (H[r] < 0) H[r] = L[size] = R[size] = size;
+	else{
+		R[size] = R[H[r]];
+		L[R[H[r]]] = size;
+		L[size] = H[r];
+		R[H[r]] = size;
+	}
+}
+
+void SudokuDlx::remove(int c){
+	L[R[c]] = L[c];
+	R[L[c]] = R[c];
+	for (int i = D[c]; i != c; i = D[i]){
+		for (int j = R[i]; j != i; j = R[j]){
+			U[D[j]] = U[j];
+			D[U[j]] = D[j];
+			--S[Col[j]];
+		}
+	}
+}
+
+void SudokuDlx::resume(int c){
+	for (int i = U[c]; i != c; i = U[i]){
+		for (int j = L[i]; j != i; j = L[j]){
+			++S[Col[U[D[j]] = D[U[j]] = j]];
+		}
+	}
+	L[R[c]] = R[L[c]] = c;
+}
+
+bool SudokuDlx::dance(int dep){
+	if (R[0] == 0){
+		ansd = dep;
+		return true;
+	}
+	int c = R[0];
+	for (int i = R[0]; i != 0; i = R[i]){
+		if (S[i] < S[c]) c = i;
+	}
+	remove(c);
+	for (int i = D[c]; i != c; i = D[i]){
+		Ans[dep] = Row[i];
+		for (int j = R[i]; j != i; j = R[j]) remove(Col[j]);
+		if (dance(dep + 1)) return true;
+		for (int j = L[i]; j != i; j = L[j]) resume(Col[j]);
+	}
+	resume(c);
+	return false;
+}
+
+SudokuDlx::SudokuDlx(const int _size_){
+	__size__ = _size_;
+	int sqt = (int)sqrt(__size__);
+	__size__ = sqt * sqt;
+	MaxM = __size__ * __size__ * 4 + 5;
+	MaxN = __size__ * __size__ * __size__ + 5;
+	maxnode = MaxN * 4 + 10;
+	L = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(L)) exit(1);
+	R = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(R)) exit(1);
+	U = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(U)) exit(1);
+	D = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(D)) exit(1);
+	Col = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(Col)) exit(1);
+	Row = (int*)malloc(maxnode * sizeof(int));
+	if (false == hasSpace(Row)) exit(1);
+	H = (int*)malloc(MaxN * sizeof(int));
+	if (false == hasSpace(H)) exit(1);
+	S = (int*)malloc(MaxM * sizeof(int));
+	if (false == hasSpace(S)) exit(1);
+	Ans = (int*)malloc(MaxN * sizeof(int));
+	if (false == hasSpace(Ans)) exit(1);
+	target = (int*)malloc((__size__ * __size__ + 10) * sizeof(int*));
+	if (false == hasSpace(target)) exit(1);
+}
+
+void SudokuDlx::reSet(){
+	memset(L, 0, maxnode * sizeof(int));
+	memset(R, 0, maxnode * sizeof(int));
+	memset(U, 0, maxnode * sizeof(int));
+	memset(D, 0, maxnode * sizeof(int));
+	memset(Col, 0, maxnode * sizeof(int));
+	memset(Row, 0, maxnode * sizeof(int));
+	memset(H, 0, MaxN * sizeof(int));
+	memset(S, 0, MaxM * sizeof(int));
+	memset(Ans, 0, MaxN * sizeof(int));
+	memset(target, 0, sizeof(int) * (__size__ * __size__ + 10));
+	int m = __size__ * __size__ * 4;
+	int n = __size__ * __size__ * __size__;
+	for (int i = 0; i <= m; ++i){
+		S[i] = 0;
+		U[i] = D[i] = i;
+		L[i] = i - 1;
+		R[i] = i + 1;
+	}
+	R[m] = 0; L[0] = m;
+	size = m, isSolved = false;
+	for (int i = 0; i <= n; ++i) H[i] = -1;
+}
+
+SudokuDlx::~SudokuDlx(){
+	free(L);
+	free(R);
+	free(U);
+	free(D);
+	free(S);
+	free(H);
+	free(Ans);
+	free(Col);
+	free(Row);
+	free(target);
+}
+
+void SudokuDlx::insert(int x, int y, int val){
+	int N = __size__;
+	int sqt = (int)sqrt(N);
+	int line = (x * N + y) * N + val;
+	link(line, x * N + y + 1);
+	link(line, N * N + x * N + val);
+	link(line, N * N * 2 + y * N + val);
+	link(line, N * N * 3 + (x / sqt * sqt + y / sqt) * N + val);
+}
+
+void SudokuDlx::outPutCheckBoard(\
+	const char *filename, bool isPrintScreen){
+	std::fstream fs;
+	fs.open(filename, std::fstream::out);
+	for (int i = 0; i < __size__; ++i){
+		for (int j = 0; j < __size__; ++j){
+			fs << this->getValue(i,j) << " ";
+			if (isPrintScreen)
+				std::cout << this->getValue(i, j) << " ";
+		}
+		fs << std::endl;
+		if (isPrintScreen)
+			std::cout << std::endl;
+	}
+	if (isPrintScreen)
+		std::cout << std::endl;
+	fs.close();
+}

@@ -8,8 +8,8 @@
 #define minSeedNum 17
 #define maxSeedNum 35
 #define		SIZE		35		
-#define		TOP			50		
-#define		LEFT		50		
+#define		TOP			20		
+#define		LEFT		20		
 
 #include <vector>
 #include <map>
@@ -115,50 +115,46 @@ private:
 };
 
 
-//class SudokuDlx{
-//
-//public:
-//
-//	SudokuDlx(int _size_=SUDOKU_SIZE_9);
-//	~SudokuDlx();
-//
-//	bool solve();
-//
-//	void setCheckBoard();
-//
-//private:
-//
-//	struct Tuple{
-//		int x, y, val;
-//		Tuple(int _x, int _y, int _val){
-//			x = _x;
-//			y = _y;
-//			val = _val;
-//		}
-//	};
-//
-//	int num;
-//	int __size__;
-//
-//	int* L;
-//	int* R;
-//	int* U;
-//	int* D;
-//	int* S;
-//	int* H;
-//	int* Ans;
-//	int* Vis;
-//	int* Col;
-//	int* Row;
-//
-//	std::vector<Tuple>;
-//
-//	void remove(const int c);
-//	void resume(const int c);
-//	void link(const int r, const int c);
-//
-//	bool dance(int dep);
-//};
-//
-//#endif
+class SudokuDlx{
 
+public:
+
+	SudokuDlx(int _size_ = SUDOKU_SIZE_9);
+	~SudokuDlx();
+
+	void setCheckBoard();
+
+	bool solve();
+
+	int getValue(const int x, const int y);
+
+	void SudokuDlx::outPutCheckBoard(\
+		const char *filename, bool isPrintScreen);
+
+private:
+
+	bool isSolved;
+
+	int MaxM, MaxN, maxnode;
+	int __size__, size, ansd;
+
+	int* L;
+	int* R;
+	int* U;
+	int* D;
+	int* S;
+	int* H;
+	int* Ans;
+	int* Col;
+	int* Row;
+	int* target;
+
+	void reSet();
+	void remove(const int c);
+	void resume(const int c);
+	void link(const int r, const int c);
+	void link_process(int x, int y, int tmp);
+	void insert(int x, int y, int val);
+
+	bool dance(int dep);
+};

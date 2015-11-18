@@ -227,38 +227,43 @@ void CSudokuWYLDlg::OnBnClickedButton2()
 	if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK3))   //交叉变换,  暂时难度设为3，即去掉60个。
 	{															//交叉变换不支持16x16
 		tStart = clock();
-		m_Sudoku9.halfRandomGen(3, tmpCheckBorad);
+		CString numStr;
+	    GetDlgItem(IDC_EDIT1)->GetWindowTextW(numStr);
+		m_Sudoku9.halfRandomGen(_ttoi(numStr), tmpCheckBorad);
 		tEnd = clock();
-		timeStr.Format(_T("交叉变换生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+		timeStr.Format(_T("交叉变换生成初盘，用时:%.6f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
 		m_Sudoku9.setDirectCheckBoard(tmpCheckBorad);
+		m_Sudoku9.outPutCheckBoard("../in.txt",false);   //将交叉变换生成的棋盘输出到in.txt中
+		p_SudokuDlx9->setCheckBoard();        //dlx对象读取棋盘
 	}
 	else   //随机生成
 	{
 		if (sudokuSize == 9)
 		{
 			tStart = clock();
-			m_Sudoku9.genCheckBoard();
+			m_Sudoku9.genCheckBoard();      //随机生成时，当生成正确的棋盘时，in.txt已经得到了该棋盘。
+			
 			tEnd = clock();
-			timeStr.Format(_T("随机生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+			timeStr.Format(_T("随机生成初盘，用时:%.6f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 			GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
-			m_Sudoku9.setCheckBoard();
+			m_Sudoku9.setCheckBoard();            //将in.txt读入到checkboard中
+			p_SudokuDlx9->setCheckBoard();        //dlx对象读取棋盘
 		}
 		else
 		{
 			tStart = clock();
 			p_Sudoku16->genCheckBoard();
 			tEnd = clock();
-			timeStr.Format(_T("随机生成初盘，用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+			timeStr.Format(_T("随机生成初盘，用时:%.6f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 			GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
-			p_Sudoku16->setCheckBoard();
+			p_Sudoku16->setCheckBoard();			 //将in.txt读入到checkboard中
+			p_SudokuDlx16->setCheckBoard();     //dlx对象读取棋盘
 		}
 
 	}
-
-
 	CDC *pDC = GetDC();
-	DrawSudoku(pDC);
+	DrawSudoku(pDC);             //只由针对回溯的棋盘画法即可。
 }
 
 
@@ -268,22 +273,30 @@ void CSudokuWYLDlg::calu()
 	CString timeStr;
 	clock_t tStart = clock();
 	bool ret;
+	/*生成的方法有3种，第一种随机生成，这种当genCheckBoard时，就已经生成了对应的in.txt,
+	*第二种交叉变换，需要单独outputCheckBoard，将checkboard数独输出到in.txt
+	*第三种人工设置，由于每次设置均是直接对内部的checkboard数独进行更改，因此在求解棋盘时，加上下面的outPutCheckBoard
+	*就是为了应付这种情况
+	*/
+	  
 	if (sudokuSize == 9)
 	{
+		m_Sudoku9.outPutCheckBoard("../in.txt", false);   //应付第三种生成方式
 		for (int i = 0; i < SUDOKU_SIZE_9; i++)
 		{
 			for (int j = 0; j < SUDOKU_SIZE_9;j++)
 			{
-				if (m_Sudoku9.getValueFromCheckBoard(i,j) != 0)
+				if (m_Sudoku9.getValueFromCheckBoard(i, j) != 0)           
 				{
 					keyBoardInput[i][j] = 1;
-				}
+				}		
 			}
 		}
 		ret = m_Sudoku9.solve();
 	}
 	else
 	{
+		p_Sudoku16->outPutCheckBoard("../in.txt", false);   //应付第三种生成方式
 		for (int i = 0; i < SUDOKU_SIZE_16; i++)
 		{
 			for (int j = 0; j < SUDOKU_SIZE_16; j++)
@@ -298,26 +311,99 @@ void CSudokuWYLDlg::calu()
 	}
 
 	clock_t tEnd = clock();
-	timeStr.Format(_T("求解成功！用时:%.11f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
+	timeStr.Format(_T("回溯法求解成功！用时:%.6f 秒"), (double)(tEnd - tStart) / CLOCKS_PER_SEC);
 	if (ret)
 	{
 		canSelected = false;
 		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
 		CDC *pDC = GetDC();
 		DrawSudoku(pDC);
+		if (sudokuSize == 9)
+			m_Sudoku9.outPutCheckBoard();   //调用回溯法类的solve是为了输出到out.txt
+		else
+			p_Sudoku16->outPutCheckBoard();  //调用回溯法类的solve是为了输出到out.txt
+		
 	}
 	else
 		MessageBox(_T("此棋盘无解 [=_=]！"));
 
 }
+void CSudokuWYLDlg::caluDlx()
+{
+	CString timeStr;
+	clock_t tStart1,tEnd1,tEnd2;
+	bool ret;
+	/*生成的方法有3种，第一种随机生成，这种当genCheckBoard时，就已经生成了对应的in.txt,
+	*第二种交叉变换，需要单独outputCheckBoard，将checkboard数独输出到in.txt
+	*第三种人工设置，由于每次设置均是直接对内部的checkboard数独进行更改，因此在求解棋盘时，加上下面的outPutCheckBoard
+	*就是为了应付这种情况
+	*/
 
+	if (sudokuSize == 9)
+	{
+		m_Sudoku9.outPutCheckBoard("../in.txt", false);   //应付第三种生成方式
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_9; j++)
+			{
+				if (m_Sudoku9.getValueFromCheckBoard(i, j) != 0)
+				{
+					keyBoardInput[i][j] = 1;
+				}
+			}
+		}
+		tStart1 = clock();
+		m_Sudoku9.solve();   //调用回溯法类的solve是为了画图
+	    tEnd1 = clock();
+		p_SudokuDlx9->setCheckBoard();        //dlx对象读取棋盘
+		ret = p_SudokuDlx9->solve();       //用dlx类进行solve
+		p_SudokuDlx9->outPutCheckBoard("../outDlx9.txt", false);   //测试dlx生成的是否相同
+	}
+	else
+	{
+		p_Sudoku16->outPutCheckBoard("../in.txt", false);   //应付第三种生成方式
+		for (int i = 0; i < SUDOKU_SIZE_16; i++)
+		{
+			for (int j = 0; j < SUDOKU_SIZE_16; j++)
+			{
+				if (p_Sudoku16->getValueFromCheckBoard(i, j) != 0)
+				{
+					keyBoardInput16[i][j] = 1;
+				}
+			}
+		}
+		tStart1 = clock();
+		p_Sudoku16->solve();   //调用回溯法类的solve是为了画图
+		tEnd1 = clock();
+		p_SudokuDlx16->setCheckBoard();        //dlx对象读取棋盘
+		ret = p_SudokuDlx16->solve();    //用dlx类进行solve
+		p_SudokuDlx16->outPutCheckBoard("../outDlx16.txt", false);   //测试dlx生成的是否相同
+	}
+
+    tEnd2 = clock();         //tEnd2-tEnd1是dlx方法
+	timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒"), (double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC,(double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+	if (ret)
+	{
+		canSelected = false;
+		GetDlgItem(IDC_STATIC)->SetWindowTextW(timeStr);
+		CDC *pDC = GetDC();
+		DrawSudoku(pDC);
+		if (sudokuSize == 9)
+			m_Sudoku9.outPutCheckBoard();    //调用回溯法类的solve是为了输出到out.txt
+		else
+			p_Sudoku16->outPutCheckBoard();     //调用回溯法类的solve是为了输出到out.txt
+
+	}
+	else
+		MessageBox(_T("此棋盘无解 [=_=]！"));
+}
 //求解棋盘
 void CSudokuWYLDlg::OnBnClickedButton1()
 {
 
 	if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK1))   //DLX被勾选
 	{
-
+		caluDlx();
 	}
 	else  if (BST_CHECKED == IsDlgButtonChecked(IDC_CHECK2))     //回溯法被勾选
 	{
@@ -330,6 +416,7 @@ void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
 
 	//9x9
 	if (sudokuSize == 9){
+		
 		for (int i = 0; i < SUDOKU_SIZE_9; i++)
 		{
 			for (int j = 0; j < SUDOKU_SIZE_9; j++)
@@ -347,7 +434,7 @@ void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
 			}
 
 		}
-		for (int i = 0; i < SUDOKU_SIZE_9; i++)
+		for (int i = 0; i < SUDOKU_SIZE_9; i++)   //将初盘的有数字的位置以特殊的颜色显示
 		{
 			for (int j = 0; j < SUDOKU_SIZE_9; j++)
 			{
@@ -358,7 +445,6 @@ void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
 				}
 			}
 		}
-
 		//画宫线
 		for (int i = 0; i < 3; i++)
 		{
@@ -368,6 +454,8 @@ void CSudokuWYLDlg::DrawSudoku(CDC* pDC)
 				SpDrawStorke(pDC, gongRect, GONGCOLOR, 4);
 			}
 		}
+
+		
 	}
 	//16x16
 #pragma region sixteen
@@ -447,17 +535,20 @@ void CSudokuWYLDlg::DrawNumbers(CDC*pDC, int i, int j, CString numStr, COLORREF 
 	CFont*def_font = pDC->SelectObject(&font);
 	pDC->SetTextColor(textColor);
 	pDC->SetBkColor(bkColor); //bkColor和brush颜色一致！
-	if (sudokuSize == 9)
-	{
-		pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);
-	}
-	else //16x16的棋盘的数字位置
-	{
-		int num = _ttoi(numStr);      //CString转int
-		if (num >= 10) //2位数
-			pDC->TextOut(LEFT + SIZE*j + SIZE / 4, TOP + SIZE*i + SIZE / 5, numStr);
-		else
-			pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);		
+	int num = _ttoi(numStr);      //CString转int
+	if (num > 0){				  
+		if (sudokuSize == 9)
+		{
+			pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);
+		}
+		else //16x16的棋盘的数字位置
+		{
+
+			if (num >= 10) //2位数
+				pDC->TextOut(LEFT + SIZE*j + SIZE / 4, TOP + SIZE*i + SIZE / 5, numStr);
+			else
+				pDC->TextOut(LEFT + SIZE*j + SIZE / 3, TOP + SIZE*i + SIZE / 5, numStr);
+		}
 	}
 	
 }
@@ -489,20 +580,20 @@ void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 	ScreenToClient(&point);
 	double docx = point.x;
 	double docy = point.y;
-
+	mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
+	mouseX = (docy - TOP) / SIZE;
 	//9x9
 	if (sudokuSize == 9){
 		if (canSelected == true)
 		{
 			if (docx < LEFT + SIZE * 9 && docx > LEFT && docy > TOP && docy < TOP + SIZE * 9)
 			{
-				mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
-				mouseX = (docy - TOP) / SIZE;
 				CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 					LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
-
 				DrawRect(pDC, selectedRect, CELLCOLOR);				//将选中的各自以原有颜色填充
 				SpDrawStorke(pDC, selectedRect, SPSTROKECOLOR, 2);       //双击时修改格子边框为 "特殊颜色"。
+				m_Sudoku9.setSimpleOneCheckBoard(mouseX, mouseY, 0);
+				keyBoardInput[mouseX][mouseY] = 1;						//同时设置选中
 
 			}
 
@@ -524,13 +615,13 @@ void CSudokuWYLDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 		{
 			if (docx < LEFT + SIZE * 16 && docx > LEFT && docy > TOP && docy < TOP + SIZE * 16)
 			{
-				mouseY = (docx - LEFT) / SIZE;     //这里的mouseY是数组的j....
-				mouseX = (docy - TOP) / SIZE;
 				CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 					LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
 
 				DrawRect(pDC, selectedRect, CELLCOLOR);				//将选中的各自以原有颜色填充
 				SpDrawStorke(pDC, selectedRect, SPSTROKECOLOR, 2);       //双击时修改格子边框为 "特殊颜色"。
+				p_Sudoku16->setSimpleOneCheckBoard(mouseX, mouseY, 0);	
+				keyBoardInput16[mouseX][mouseY] = 1;
 
 			}
 
@@ -579,12 +670,13 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 						CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 							LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
 						SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+						keyBoardInput[mouseX][mouseY] = 0;							//不符合要求时将相应位置keyBoardInput置为0
 					}
 					else
 					{
 						m_Sudoku9.setSimpleOneCheckBoard(mouseX, mouseY, inValue);
 						DrawNumbers(pDC, mouseX, mouseY, numStr, SELECTEDNUMCOLOR, CELLCOLOR);
-						keyBoardInput[mouseX][mouseY] = 1;			//当输入数字后，才能设置为1				
+						keyBoardInput[mouseX][mouseY] = 1;							
 					}
 
 				}
@@ -596,6 +688,7 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 					CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 						LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
 					SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+					keyBoardInput[mouseX][mouseY] = 0;					//不符合要求时将相应位置keyBoardInput置为0
 				}
 
 
@@ -628,6 +721,7 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 						CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 							LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
 						SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+						keyBoardInput[mouseX][mouseY] = 0;							//不符合要求时将相应位置keyBoardInput置为0
 					}
 					else
 					{
@@ -645,9 +739,8 @@ BOOL CSudokuWYLDlg::PreTranslateMessage(MSG* pMsg)
 					CRect selectedRect(LEFT + SIZE*mouseY, TOP + SIZE*mouseX, \
 						LEFT + SIZE*(mouseY + 1), TOP + SIZE*(mouseX + 1));
 					SpDrawStorke(pDC, selectedRect, STROKECOLOR, 2);           //还原选中框颜色
+					keyBoardInput[mouseX][mouseY] = 0;							//不符合要求时将相应位置keyBoardInput置为0
 				}
-
-
 			}
 		}
 	}
@@ -703,5 +796,5 @@ void CSudokuWYLDlg::OnBnClickedButton3()
 /*								使用说明                                 */
 /*1.在通过复选框更换棋盘大小时，最好要按一下“棋盘重置”，使得复选框失去焦点，否则
 输入数字“1,9”时会使得棋盘界面更改。
-  2.只能通过棋盘上方的数字键“1~9”和“a~g（仅在16x16棋盘有效，分别代表10~16）”*/
+  2.只能通过棋盘上方的数字键“1~9”和“a~g（仅在16x16棋盘有效，分别代表10~16）”
 /************************************************************************/
