@@ -342,7 +342,7 @@ void CSudokuWYLDlg::calu()
 void CSudokuWYLDlg::caluDlx()
 {
 	CString timeStr;
-	clock_t tStart1,tEnd1,tEnd2;
+	clock_t tStart1,tEnd1,tStart2,tEnd2;
 	bool ret;
 	/*生成的方法有3种，第一种随机生成，这种当genCheckBoard时，就已经生成了对应的in.txt,
 	*第二种交叉变换，需要单独outputCheckBoard，将checkboard数独输出到in.txt
@@ -367,7 +367,9 @@ void CSudokuWYLDlg::caluDlx()
 		m_Sudoku9.solve();   //调用回溯法类的solve是为了画图
 	    tEnd1 = clock();
 		p_SudokuDlx9->setCheckBoard();        //dlx对象读取棋盘
+		tStart2 = clock();
 		ret = p_SudokuDlx9->solve();       //用dlx类进行solve
+		tEnd2 = clock();
 		p_SudokuDlx9->outPutCheckBoard("../outDlx9.txt", false);   //输出dlx生成的数独
 		//检测两种版本是否一致
 		for (int i = 0; i < SUDOKU_SIZE_9;i++)
@@ -381,7 +383,7 @@ void CSudokuWYLDlg::caluDlx()
 			}
 		}
 	}
-	else
+	else     //16x16
 	{
 		p_Sudoku16->outPutCheckBoard("../in.txt", false);   //应付第三种生成方式
 		for (int i = 0; i < SUDOKU_SIZE_16; i++)
@@ -398,7 +400,9 @@ void CSudokuWYLDlg::caluDlx()
 		p_Sudoku16->solve();   //调用回溯法类的solve是为了画图
 		tEnd1 = clock();
 		p_SudokuDlx16->setCheckBoard();        //dlx对象读取棋盘
+		tStart2 = clock();
 		ret = p_SudokuDlx16->solve();    //用dlx类进行solve
+		tEnd2 = clock();         //tEnd2-tStart2是dlx方法
 		p_SudokuDlx16->outPutCheckBoard("../outDlx16.txt", false);   //测试dlx生成的是否相同
 		//检测两种版本是否一致
 		for (int i = 0; i < SUDOKU_SIZE_16; i++)
@@ -413,15 +417,14 @@ void CSudokuWYLDlg::caluDlx()
 		}
 	}
 
-    tEnd2 = clock();         //tEnd2-tEnd1是dlx方法
 	if (backTrackSameWithDlx)
 	{
-		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒"), (double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒,\n两种产生的棋盘相同"), (double)(tEnd2 - tStart2) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
 	}
 	else
 	{
-		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒,两种方法生成的棋盘不同。"), \
-			(double)(tEnd2 - tEnd1) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
+		timeStr.Format(_T("DLX求解成功！用时:%.6f 秒\n若用回溯法求解！用时:%.6f 秒,\n两种方法生成的棋盘不同。"), \
+			(double)(tEnd2 - tStart2) / CLOCKS_PER_SEC, (double)(tEnd1 - tStart1) / CLOCKS_PER_SEC);
 		GetDlgItem(IDC_BUTTON4)->EnableWindow(TRUE);   
 	}
 	if (ret)
